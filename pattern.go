@@ -97,11 +97,11 @@ func (p *errPattern) Err() error {
 }
 
 func NormalizePath(path string, rootDir string) (string, error) {
-	relPath, err := filepath.Rel(rootDir, path)
+	relPath, err := filepath.Rel(filepath.ToSlash(rootDir), filepath.ToSlash(path))
 	if err != nil {
 		return "", errors.New(
 			"Path '" + path + "' is not related to root directory '" + rootDir + "'",
 		)
 	}
-	return strings.TrimLeft(filepath.ToSlash(relPath), "/"), nil
+	return strings.TrimRight(relPath, "/"), nil
 }
