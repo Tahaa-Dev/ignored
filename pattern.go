@@ -15,7 +15,7 @@ type Pattern interface {
 }
 
 func ParsePattern(pat string) Pattern {
-	p := &pattern{}
+	p := &globPattern{}
 
 	if strings.HasPrefix(pat, "!") {
 		pat = pat[1:]
@@ -28,8 +28,7 @@ func ParsePattern(pat string) Pattern {
 	}
 
 	if len(pat) == 0 {
-		p.err = errors.New("Unexpected EOF: Pattern is empty")
-		return p
+		return &errPattern{errors.New("Unexpected EOF: Pattern is empty")}
 	}
 
 	if !strings.ContainsRune(pat, '/') {
@@ -40,7 +39,7 @@ func ParsePattern(pat string) Pattern {
 
 	g, err := glob.Compile(pat, '/')
 	if err != nil {
-		p.err = err
+		return &errPattern{err}
 	} else {
 		p.glob = g
 	}
@@ -48,29 +47,30 @@ func ParsePattern(pat string) Pattern {
 	return p
 }
 
-type pattern struct {
+type globPattern struct {
 	glob  glob.Glob
 	isDir bool
 	isNeg bool
-	err   error
 }
 
-func (p *pattern) Match(path string, isDir bool, rootDir string) (bool, error) {
-	if p.err != nil || (p.isDir && !isDir) {
+func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+	if p.isDir && !isDir {
 		return false, nil
 	}
 
 	relPath, err := filepath.Rel(rootDir, path)
 	if err != nil {
-		return false, err
+		return false, errors.New(
+			"Path '" + path + "' is not related to root directory '" + rootDir + "'",
+		)
 	}
 	path = filepath.ToSlash(relPath)
 
 	return p.MatchNormalized(path, isDir), nil
 }
 
-func (p *pattern) MatchNormalized(path string, isDir bool) bool {
-	if p.err != nil || (p.isDir && !isDir) {
+func (p *globPattern) MatchNormalized(path string, isDir bool) bool {
+	if p.isDir && !isDir {
 		return false
 	}
 
@@ -81,6 +81,20 @@ func (p *pattern) MatchNormalized(path string, isDir bool) bool {
 	return match
 }
 
-func (p *pattern) Err() error {
+func (p *globPattern) Err() error {
+	return nil
+}
+
+type errPattern struct {
+	err error
+}
+
+func (p *errPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+	return false, nil
+}
+func (p *errPattern) MatchNormalized(path string, isDir bool) bool {
+	return false
+}
+func (p *errPattern) Err() error {
 	return p.err
 }
