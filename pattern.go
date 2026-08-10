@@ -38,6 +38,9 @@ func ParsePattern(pat string) Pattern {
 	}
 
 	if !strings.ContainsRune(pat, '/') {
+		if !strings.ContainsAny(pat, "*[]?\\{}") {
+			return &baseNamePattern{pat, isDir, isNeg}
+		}
 		pat = "**/" + pat
 	} else if pat[0] != '/' {
 		pat = "/" + pat
@@ -132,6 +135,24 @@ func (p *literalPattern) MatchNormalized(path string, isDir bool) bool {
 }
 
 func (p *literalPattern) Err() error {
+	return nil
+}
+
+type baseNamePattern struct {
+	baseName string
+	isDir    bool
+	isNeg    bool
+}
+
+func (p *baseNamePattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+	return p.MatchNormalized(path, isDir), nil
+}
+
+func (p *baseNamePattern) MatchNormalized(path string, isDir bool) bool {
+	return filepath.Base(filepath.ToSlash(path)) == p.baseName
+}
+
+func (p *baseNamePattern) Err() error {
 	return nil
 }
 
