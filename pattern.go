@@ -15,7 +15,8 @@ type Pattern interface {
 }
 
 func ParsePattern(pat string) Pattern {
-	p := &globPattern{}
+	isNeg := false
+	isDir := false
 
 	if idx := strings.IndexRune(pat, '#'); idx != -1 {
 		pat = pat[:idx]
@@ -24,12 +25,12 @@ func ParsePattern(pat string) Pattern {
 
 	if strings.HasPrefix(pat, "!") {
 		pat = pat[1:]
-		p.isNeg = true
+		isNeg = true
 	}
 
 	if strings.HasSuffix(pat, "/") {
 		pat = pat[:len(pat)-1]
-		p.isDir = true
+		isDir = true
 	}
 
 	if len(pat) == 0 {
@@ -38,18 +39,19 @@ func ParsePattern(pat string) Pattern {
 
 	if !strings.ContainsRune(pat, '/') {
 		pat = "**/" + pat
-	} else {
-		pat = strings.TrimLeft(pat, "/")
+	} else if pat[0] != '/' {
+		pat = "/" + pat
+		if !strings.ContainsAny(pat, "*[]?\\{}") {
+			return &literalPattern{pat, isDir, isNeg}
+		}
 	}
 
 	g, err := glob.Compile(pat, '/')
 	if err != nil {
 		return &errPattern{err}
-	} else {
-		p.glob = g
 	}
 
-	return p
+	return &globPattern{g, isDir, isNeg}
 }
 
 type globPattern struct {
@@ -99,6 +101,37 @@ func (p *errPattern) MatchNormalized(path string, isDir bool) bool {
 }
 func (p *errPattern) Err() error {
 	return p.err
+}
+
+type literalPattern struct {
+	literal string
+	isDir   bool
+	isNeg   bool
+}
+
+func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+	path, err := NormalizePath(path, rootDir)
+	if err != nil {
+		return false, err
+	}
+
+	return p.MatchNormalized(path, isDir), nil
+}
+
+func (p *literalPattern) MatchNormalized(path string, isDir bool) bool {
+	if !strings.HasPrefix(path, p.literal) {
+		return false
+	}
+
+	if p.isDir {
+		return (isDir && len(path) == len(p.literal)) ||
+			(len(path) > len(p.literal)+1 && path[len(p.literal)] == '/')
+	}
+
+	return len(path) == len(p.literal)
+}
+func (p *literalPattern) Err() error {
+	return nil
 }
 
 func NormalizePath(path string, rootDir string) (string, error) {
