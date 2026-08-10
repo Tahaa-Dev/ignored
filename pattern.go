@@ -62,12 +62,12 @@ type globPattern struct {
 
 func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
 	if p.isDir && !isDir {
-		return false, nil
+		return getRes(false, p.isNeg), nil
 	}
 
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		return false, err
+		return getRes(false, p.isNeg), err
 	}
 
 	return p.MatchNormalized(path, isDir), nil
@@ -75,14 +75,11 @@ func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, erro
 
 func (p *globPattern) MatchNormalized(path string, isDir bool) bool {
 	if p.isDir && !isDir {
-		return false
+		return getRes(false, p.isNeg)
 	}
 
 	match := p.glob.Match(path)
-	if p.isNeg {
-		return !match
-	}
-	return match
+	return getRes(match, p.isNeg)
 }
 
 func (p *globPattern) Err() error {
@@ -112,7 +109,7 @@ type literalPattern struct {
 func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		return false, err
+		return getRes(false, p.isNeg), err
 	}
 
 	return p.MatchNormalized(path, isDir), nil
@@ -120,16 +117,20 @@ func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, e
 
 func (p *literalPattern) MatchNormalized(path string, isDir bool) bool {
 	if !strings.HasPrefix(path, p.literal) {
-		return false
+		return getRes(false, p.isNeg)
 	}
 
 	if p.isDir {
-		return (isDir && len(path) == len(p.literal)) ||
-			(len(path) > len(p.literal)+1 && path[len(p.literal)] == '/')
+		return getRes(
+			(isDir && len(path) == len(p.literal)) ||
+				(len(path) > len(p.literal)+1 && path[len(p.literal)] == '/'),
+			p.isNeg,
+		)
 	}
 
-	return len(path) == len(p.literal)
+	return getRes(len(path) == len(p.literal), p.isNeg)
 }
+
 func (p *literalPattern) Err() error {
 	return nil
 }
@@ -142,4 +143,11 @@ func NormalizePath(path string, rootDir string) (string, error) {
 		)
 	}
 	return "/" + strings.TrimRight(relPath, "/"), nil
+}
+
+func getRes(res bool, isNeg bool) bool {
+	if isNeg {
+		return !res
+	}
+	return res
 }
