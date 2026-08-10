@@ -17,6 +17,11 @@ type Pattern interface {
 func ParsePattern(pat string) Pattern {
 	p := &globPattern{}
 
+	if idx := strings.IndexRune(pat, '#'); idx != -1 {
+		pat = pat[:idx]
+	}
+	pat = strings.TrimSpace(pat)
+
 	if strings.HasPrefix(pat, "!") {
 		pat = pat[1:]
 		p.isNeg = true
@@ -103,5 +108,5 @@ func NormalizePath(path string, rootDir string) (string, error) {
 			"Path '" + path + "' is not related to root directory '" + rootDir + "'",
 		)
 	}
-	return strings.TrimRight(relPath, "/"), nil
+	return "/" + strings.TrimRight(relPath, "/"), nil
 }
