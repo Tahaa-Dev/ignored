@@ -58,13 +58,10 @@ func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, erro
 		return false, nil
 	}
 
-	relPath, err := filepath.Rel(rootDir, path)
+	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		return false, errors.New(
-			"Path '" + path + "' is not related to root directory '" + rootDir + "'",
-		)
+		return false, err
 	}
-	path = filepath.ToSlash(relPath)
 
 	return p.MatchNormalized(path, isDir), nil
 }
@@ -97,4 +94,14 @@ func (p *errPattern) MatchNormalized(path string, isDir bool) bool {
 }
 func (p *errPattern) Err() error {
 	return p.err
+}
+
+func NormalizePath(path string, rootDir string) (string, error) {
+	relPath, err := filepath.Rel(rootDir, path)
+	if err != nil {
+		return "", errors.New(
+			"Path '" + path + "' is not related to root directory '" + rootDir + "'",
+		)
+	}
+	return strings.TrimLeft(filepath.ToSlash(relPath), "/"), nil
 }
