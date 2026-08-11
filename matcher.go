@@ -18,6 +18,7 @@ type Matcher interface {
 	ExtendFromReader(reader io.Reader) Matcher
 	removePatterns(idx int)
 	Err() error
+	Len() int
 	wrapErr(newErr error)
 }
 
@@ -108,3 +109,4 @@ func (m *matcher) ExtendFromReader(reader io.Reader) Matcher {
 func (m *matcher) removePatterns(idx int) { m.patterns = m.patterns[:idx] }
 func (m *matcher) Err() error             { return m.err }
 func (m *matcher) wrapErr(newErr error)   { m.err = errors.Join(m.err, newErr) }
+func (m *matcher) Len() int               { return len(m.patterns) }
