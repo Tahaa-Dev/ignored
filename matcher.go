@@ -3,6 +3,7 @@ package ignored
 import (
 	"bufio"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -13,6 +14,7 @@ type Matcher interface {
 	Extend(patterns ...string) Matcher
 	ExtendFromPatterns(patterns ...Pattern) Matcher
 	ExtendFromFile(path string) Matcher
+	ExtendFromReader(reader io.Reader) Matcher
 	removePatterns(idx int)
 	Err() error
 	wrapErr(newErr error)
@@ -76,19 +78,24 @@ func (m *matcher) ExtendFromFile(path string) Matcher {
 		m.wrapErr(err)
 	} else {
 		defer m.wrapErr(file.Close())
-
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if pat := ParsePattern(line); pat.Err() != nil {
-				m.err = errors.Join(m.err, pat.Err())
-			} else {
-				m.patterns = append(m.patterns, pat)
-			}
-		}
-
-		m.wrapErr(scanner.Err())
+		m.ExtendFromReader(file)
 	}
+
+	return m
+}
+
+func (m *matcher) ExtendFromReader(reader io.Reader) Matcher {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if pat := ParsePattern(line); pat.Err() != nil {
+			m.err = errors.Join(m.err, pat.Err())
+		} else {
+			m.patterns = append(m.patterns, pat)
+		}
+	}
+
+	m.wrapErr(scanner.Err())
 
 	return m
 }
