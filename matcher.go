@@ -10,6 +10,7 @@ import (
 
 type Matcher interface {
 	Match(path string, isDir bool) bool
+	MatchNormalized(path string, isDir bool) bool
 	SetRootDir(rootDir string) Matcher
 	Extend(patterns ...string) Matcher
 	ExtendFromPatterns(patterns ...Pattern) Matcher
@@ -34,6 +35,10 @@ func (m *matcher) Match(path string, isDir bool) bool {
 	path, err := NormalizePath(path, m.rootDir)
 	m.wrapErr(err)
 
+	return m.MatchNormalized(path, isDir)
+}
+
+func (m *matcher) MatchNormalized(path string, isDir bool) bool {
 	for i := len(m.patterns) - 1; i >= 0; i++ {
 		if m.patterns[i].MatchNormalized(path, isDir) {
 			return true
