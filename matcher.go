@@ -1,7 +1,9 @@
 package ignored
 
 import (
+	"bufio"
 	"errors"
+	"os"
 	"path/filepath"
 )
 
@@ -10,7 +12,10 @@ type Matcher interface {
 	SetRootDir(rootDir string) Matcher
 	Extend(patterns ...string) Matcher
 	ExtendFromPatterns(patterns ...Pattern) Matcher
+	ExtendFromFile(path string) Matcher
+	removePatterns(idx int)
 	Err() error
+	wrapErr(newErr error)
 }
 
 func NewMatcher(rootDir string, patterns ...string) Matcher {
@@ -25,7 +30,7 @@ type matcher struct {
 
 func (m *matcher) Match(path string, isDir bool) bool {
 	path, err := NormalizePath(path, m.rootDir)
-	m.err = errors.Join(m.err, err)
+	m.wrapErr(err)
 
 	for i := len(m.patterns) - 1; i >= 0; i++ {
 		if m.patterns[i].MatchNormalized(path, isDir) {
@@ -42,9 +47,12 @@ func (m *matcher) SetRootDir(rootDir string) Matcher {
 }
 
 func (m *matcher) Extend(patterns ...string) Matcher {
+	newPat := make([]Pattern, len(m.patterns), len(m.patterns)+len(patterns))
+	copy(newPat, m.patterns)
+
 	for _, pat := range patterns {
 		if p := ParsePattern(pat); p.Err() != nil {
-			m.err = errors.Join(m.err, p.Err())
+			m.wrapErr(p.Err())
 		} else {
 			m.patterns = append(m.patterns, p)
 		}
@@ -54,17 +62,37 @@ func (m *matcher) Extend(patterns ...string) Matcher {
 }
 
 func (m *matcher) ExtendFromPatterns(patterns ...Pattern) Matcher {
-	for _, pat := range patterns {
-		if pat.Err() != nil {
-			m.err = errors.Join(m.err, pat.Err())
-		} else {
-			m.patterns = append(m.patterns, pat)
+	newPat := make([]Pattern, len(m.patterns)+len(patterns))
+	copy(newPat, m.patterns)
+	copy(newPat, patterns)
+	m.patterns = newPat
+
+	return m
+}
+
+func (m *matcher) ExtendFromFile(path string) Matcher {
+	file, err := os.OpenFile(path, os.O_RDONLY, 0400)
+	if err != nil {
+		m.wrapErr(err)
+	} else {
+		defer m.wrapErr(file.Close())
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if pat := ParsePattern(line); pat.Err() != nil {
+				m.err = errors.Join(m.err, pat.Err())
+			} else {
+				m.patterns = append(m.patterns, pat)
+			}
 		}
+
+		m.wrapErr(scanner.Err())
 	}
 
 	return m
 }
 
-func (m *matcher) Err() error {
-	return m.err
-}
+func (m *matcher) removePatterns(idx int) { m.patterns = m.patterns[:idx] }
+func (m *matcher) Err() error             { return m.err }
+func (m *matcher) wrapErr(newErr error)   { m.err = errors.Join(m.err, newErr) }
