@@ -1,0 +1,72 @@
+version: "2"
+run:
+  issues-exit-code: 1
+  tests: true
+
+linters:
+  default: none
+
+  enable:
+    - asciicheck
+    - copyloopvar
+    - ineffassign
+    - revive
+    - misspell
+    - staticcheck
+    - gosec
+    - govet
+    - dupl
+    - errcheck
+
+  settings:
+    revive:
+      enable-all-rules: true
+
+  exclusions:
+    rules:
+      - linters:
+          - revive
+        text: "bool-literal-in-expr"
+      - linters:
+          - revive
+        text: "exported"
+      - linters:
+          - revive
+        text: "argument-limit"
+      - linters:
+          - revive
+        text: "cognitive-complexity"
+      - linters:
+          - revive
+        text: "cyclomatic"
+      - linters:
+          - revive
+        text: "package-comments"
+      - linters:
+          - revive
+        text: "add-constant"
+      - linters:
+          - revive
+        text: "function-length"
+      - linters:
+          - revive
+        text: "line-length-limit"
+      - linters:
+          - revive
+        text: "unhandled-error"
+      - linters:
+          - revive
+        text: "unchecked-type-assertion"
+      - linters:
+          - revive
+        text: "package-naming"
+      - linters:
+          - revive
+        text: "flag-parameter"
+      - linters:
+          - gosec
+        text: "G304"
+
+formatters:
+  enable:
+    - golines
