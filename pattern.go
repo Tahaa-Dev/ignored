@@ -14,6 +14,7 @@ type Pattern interface {
 	Err() error
 }
 
+// Function for constructing [Pattern] interfaces
 func ParsePattern(pat string) Pattern {
 	isNeg := false
 	isDir := false
@@ -156,6 +157,7 @@ func (*baseNamePattern) Err() error {
 	return nil
 }
 
+// Helper function for normalizing paths used by [Pattern].Match() and [Matcher].Match()
 func NormalizePath(path string, rootDir string) (string, error) {
 	relPath, err := filepath.Rel(filepath.ToSlash(rootDir), filepath.ToSlash(path))
 	if err != nil {

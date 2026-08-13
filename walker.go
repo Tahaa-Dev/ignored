@@ -12,6 +12,7 @@ type RepoWalker interface {
 	Err() error
 }
 
+// Function for constructing [RepoWalker] interfaces
 func NewRepoWalker(root string) RepoWalker {
 	return &treeRepoWalker{root, nil, NewMatcher(root), ".gitignore"}
 }

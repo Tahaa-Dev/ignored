@@ -22,6 +22,7 @@ type Matcher interface {
 	wrapErr(newErr error)
 }
 
+// Function for constructing [Matcher] interfaces
 func NewMatcher(rootDir string, patterns ...string) Matcher {
 	return (&matcher{patterns: make([]Pattern, 0, 7)}).SetRootDir(rootDir).Extend(patterns...)
 }
