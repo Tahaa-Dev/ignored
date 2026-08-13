@@ -31,6 +31,7 @@ func (rw *treeRepoWalker) WalkRepo(f fs.WalkDirFunc) {
 			baseName := d.Name()
 			isDir := d.IsDir()
 
+			rw.matcher.wrapErr(err)
 			if rw.matcher.MatchNormalized("/"+path, isDir) {
 				if isDir {
 					return fs.SkipDir
