@@ -37,9 +37,8 @@ func (n *dirNode) getParent() node             { return n.parent }
 func (n *dirNode) getAncestor(ancestor string) node {
 	if n.path == ancestor {
 		return n
-	} else {
-		return n.parent.getAncestor(ancestor)
 	}
+	return n.parent.getAncestor(ancestor)
 }
 
 type fileNode struct {
@@ -50,6 +49,6 @@ type fileNode struct {
 func (n *fileNode) getPath() string                  { return n.path }
 func (n *fileNode) getParent() node                  { return n.parent }
 func (n *fileNode) rollback() int                    { return n.parent.rollback() }
-func (n *fileNode) setRollback(idx int)              {}
-func (n *fileNode) addChild(newChild node) node      { return n }
+func (*fileNode) setRollback(_ int)                  {}
+func (n *fileNode) addChild(_ node) node             { return n }
 func (n *fileNode) getAncestor(ancestor string) node { return n.parent.getAncestor(ancestor) }

@@ -34,7 +34,7 @@ func ParsePattern(pat string) Pattern {
 	}
 
 	if len(pat) == 0 {
-		return &errPattern{errors.New("Unexpected EOF: Pattern is empty")}
+		return &errPattern{errors.New("unexpected EOF: pattern is empty")}
 	}
 
 	if !strings.ContainsRune(pat, '/') {
@@ -85,7 +85,7 @@ func (p *globPattern) MatchNormalized(path string, isDir bool) bool {
 	return getRes(match, p.isNeg)
 }
 
-func (p *globPattern) Err() error {
+func (*globPattern) Err() error {
 	return nil
 }
 
@@ -93,10 +93,10 @@ type errPattern struct {
 	err error
 }
 
-func (p *errPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+func (*errPattern) Match(_ string, _ bool, _ string) (bool, error) {
 	return false, nil
 }
-func (p *errPattern) MatchNormalized(path string, isDir bool) bool {
+func (*errPattern) MatchNormalized(_ string, _ bool) bool {
 	return false
 }
 func (p *errPattern) Err() error {
@@ -134,7 +134,7 @@ func (p *literalPattern) MatchNormalized(path string, isDir bool) bool {
 	return getRes(len(path) == len(p.literal), p.isNeg)
 }
 
-func (p *literalPattern) Err() error {
+func (*literalPattern) Err() error {
 	return nil
 }
 
@@ -144,15 +144,15 @@ type baseNamePattern struct {
 	isNeg    bool
 }
 
-func (p *baseNamePattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+func (p *baseNamePattern) Match(path string, isDir bool, _ string) (bool, error) {
 	return p.MatchNormalized(path, isDir), nil
 }
 
 func (p *baseNamePattern) MatchNormalized(path string, isDir bool) bool {
-	return filepath.Base(filepath.ToSlash(path)) == p.baseName
+	return filepath.Base(filepath.ToSlash(path)) == p.baseName && p.isDir == isDir
 }
 
-func (p *baseNamePattern) Err() error {
+func (*baseNamePattern) Err() error {
 	return nil
 }
 

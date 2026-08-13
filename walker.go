@@ -34,9 +34,8 @@ func (rw *treeRepoWalker) WalkRepo(f fs.WalkDirFunc) {
 			if rw.matcher.MatchNormalized("/"+path, isDir) {
 				if isDir {
 					return fs.SkipDir
-				} else {
-					return nil
 				}
+				return nil
 			}
 
 			if baseName == rw.ignoreFileName {
