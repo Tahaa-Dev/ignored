@@ -45,9 +45,8 @@ func ParsePattern(pat string) Pattern {
 		pat = pat[1:]
 		isNeg = true
 	}
-
-	if strings.HasSuffix(pat, "/") {
-		pat = pat[:len(pat)-1]
+	if suffixRemoved := strings.TrimRight(pat, "/"); len(suffixRemoved) < len(pat) {
+		pat = suffixRemoved
 		isDir = true
 	}
 
@@ -56,14 +55,22 @@ func ParsePattern(pat string) Pattern {
 	}
 
 	if !strings.ContainsRune(pat, '/') {
-		if !strings.ContainsAny(pat, "*[]?\\{}") {
-			return &baseNamePattern{pat, isDir, isNeg}
+		pat = "**/" + pat + "/**"
+	} else {
+		if !strings.HasPrefix(pat, "/") {
+			pat = "/" + pat
 		}
-		pat = "**/" + pat
-	} else if pat[0] != '/' {
-		pat = "/" + pat
+
 		if !strings.ContainsAny(pat, "*[]?\\{}") {
+			if !strings.HasSuffix(pat, "/") {
+				pat = pat + "/"
+			}
 			return &literalPattern{pat, isDir, isNeg}
+		}
+		if strings.HasSuffix(pat, "/") {
+			pat = pat + "**"
+		} else {
+			pat = pat + "/**"
 		}
 	}
 
@@ -82,10 +89,6 @@ type globPattern struct {
 }
 
 func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
-	if p.isDir && !isDir {
-		return getRes(false, p.isNeg), nil
-	}
-
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
 		return getRes(false, p.isNeg), err
@@ -96,11 +99,10 @@ func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, erro
 
 func (p *globPattern) MatchNormalized(path string, isDir bool) bool {
 	if p.isDir && !isDir {
-		return getRes(false, p.isNeg)
+		path = filepath.Dir(path)
 	}
 
-	match := p.glob.Match(path)
-	return getRes(match, p.isNeg)
+	return getRes(p.glob.Match(path), p.isNeg)
 }
 
 func (*globPattern) Err() error {
@@ -156,24 +158,6 @@ func (*literalPattern) Err() error {
 	return nil
 }
 
-type baseNamePattern struct {
-	baseName string
-	isDir    bool
-	isNeg    bool
-}
-
-func (p *baseNamePattern) Match(path string, isDir bool, _ string) (bool, error) {
-	return p.MatchNormalized(path, isDir), nil
-}
-
-func (p *baseNamePattern) MatchNormalized(path string, isDir bool) bool {
-	return filepath.Base(filepath.ToSlash(path)) == p.baseName && p.isDir == isDir
-}
-
-func (*baseNamePattern) Err() error {
-	return nil
-}
-
 // Helper function for normalizing paths used by [Pattern].Match() and [Matcher].Match()
 func NormalizePath(path string, rootDir string) (string, error) {
 	relPath, err := filepath.Rel(filepath.ToSlash(rootDir), filepath.ToSlash(path))
@@ -182,7 +166,10 @@ func NormalizePath(path string, rootDir string) (string, error) {
 			"Path '" + path + "' is not related to root directory '" + rootDir + "'",
 		)
 	}
-	return "/" + strings.TrimRight(relPath, "/"), nil
+	if strings.HasSuffix(path, "/") {
+		return "/" + relPath, nil
+	}
+	return "/" + relPath + "/", nil
 }
 
 func getRes(res bool, isNeg bool) bool {
