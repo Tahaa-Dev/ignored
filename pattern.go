@@ -8,9 +8,26 @@ import (
 	"github.com/gobwas/glob"
 )
 
+// Pattern provides methods to handle ignore patterns individually.
+// It is parsed from a string via the [ParsePattern] function.
+//
+// Example:
+//
+//	pat := ignored.ParsePattern("*.log")
+//	isIgnored, err := pat.Match("app.log", false, "/home/user/project")
+//	if err != nil {
+//		// handle error
+//	}
+//	if isIgnored {
+//		fmt.Println("File is ignored")
+//	}
 type Pattern interface {
+	// Match determines if the given path matches the pattern, relative to the rootDir.
+	// It returns true if the path is matched, and an error if normalization fails.
 	Match(path string, isDir bool, rootDir string) (bool, error)
+	// MatchNormalized checks if the already-normalized path matches the pattern.
 	MatchNormalized(path string, isDir bool) bool
+	// Err returns any error encountered during pattern parsing or matching.
 	Err() error
 }
 

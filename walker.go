@@ -6,9 +6,28 @@ import (
 	"path/filepath"
 )
 
+// RepoWalker provides an ignore file compliant wrapper for [fs.WalkDir].
+// It is constructed via the [NewRepoWalker] function.
+//
+// ## Example:
+//
+//	walker := ignored.NewRepoWalker("/home/user/project")
+//	walker.WalkRepo(func(path string, d fs.DirEntry, err error) error {
+//		if err != nil {
+//			return err
+//		}
+//		fmt.Println("Visiting:", path)
+//		return nil
+//	})
+//	if walker.Err() != nil {
+//		// handle error
+//	}
 type RepoWalker interface {
+	// WalkRepo traverses the repository starting at the root, applying the [Matcher] to skip ignored files and directories. It uses the provided [fs.WalkDirFunc].
 	WalkRepo(fs.WalkDirFunc)
+	// SetIgnoreFileName changes the name of the file used to detect ignore patterns (default is ".gitignore").
 	SetIgnoreFileName(fileName string) RepoWalker
+	// Err returns any error that occurred during the repository traversal.
 	Err() error
 }
 

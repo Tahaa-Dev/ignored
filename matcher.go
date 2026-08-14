@@ -8,17 +8,42 @@ import (
 	"path/filepath"
 )
 
+// Matcher provides methods to handle multiple ignore patterns at once.
+// It is constructed via the [NewMatcher] function.
+//
+// ## Example:
+//
+//	matcher := ignored.NewMatcher("/home/user/project", "*.log", "node_modules/")
+//	if matcher.Match("node_modules/pkg/main.js", false) {
+//		fmt.Println("Path is ignored")
+//	}
+//
+//	// Dynamically add patterns
+//	matcher.Extend("*.tmp")
+//	matcher.ExtendFromFile("/home/user/project/.gitignore")
 type Matcher interface {
+	// Match determines if the given path is matched by any of the patterns in the [Matcher].
+	// It returns true if matched.
 	Match(path string, isDir bool) bool
+	// MatchNormalized checks if the already-normalized path is matched by any pattern.
 	MatchNormalized(path string, isDir bool) bool
+	// SetRootDir updates the root directory for the [Matcher].
 	SetRootDir(rootDir string) Matcher
+	// Extend appends new patterns from a slice of strings to the [Matcher].
 	Extend(patterns ...string) Matcher
+	// ExtendFromPatterns appends new pre-parsed [Pattern]s to the [Matcher].
 	ExtendFromPatterns(patterns ...Pattern) Matcher
+	// ExtendFromFile loads patterns from a file at the given path into the [Matcher].
 	ExtendFromFile(path string) Matcher
+	// ExtendFromReader loads patterns from an [io.Reader] into the [Matcher].
 	ExtendFromReader(reader io.Reader) Matcher
+	// removePatterns rolls back the [Matcher]'s patterns to the specified index.
 	removePatterns(idx int)
+	// Err returns the first accumulated error in the [Matcher].
 	Err() error
+	// Len returns the number of patterns currently in the [Matcher].
 	Len() int
+	// wrapErr accumulates a new error into the [Matcher]'s existing error.
 	wrapErr(newErr error)
 }
 
