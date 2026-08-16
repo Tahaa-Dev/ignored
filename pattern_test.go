@@ -55,6 +55,30 @@ func TestPattern_Match(t *testing.T) {
 			"/root",
 			true,
 		},
+		{
+			"Ignore Directory Content Dir Or File",
+			"node_modules",
+			"/root/node_modules/app/index.js",
+			false,
+			"/root",
+			true,
+		},
+		{
+			"Ignore Directory Content Anchored",
+			"/node_modules/app/",
+			"/root/node_modules/app/index.js",
+			false,
+			"/root",
+			true,
+		},
+		{
+			"Ignore Directory Content Anchored Dir Or File",
+			"/node_modules/app",
+			"/root/node_modules/app/index.js",
+			false,
+			"/root",
+			true,
+		},
 	}
 
 	for _, tt := range tests {

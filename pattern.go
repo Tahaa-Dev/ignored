@@ -143,15 +143,14 @@ func (p *literalPattern) MatchNormalized(path string, isDir bool) bool {
 		return getRes(false, p.isNeg)
 	}
 
-	if p.isDir {
-		return getRes(
-			(isDir && len(path) == len(p.literal)) ||
-				(len(path) > len(p.literal)+1 && path[len(p.literal)] == '/'),
-			p.isNeg,
-		)
+	var res bool
+	if p.isDir && !isDir {
+		res = len(path) > len(p.literal)
+	} else {
+		res = len(path) >= len(p.literal)
 	}
 
-	return getRes(len(path) == len(p.literal), p.isNeg)
+	return getRes(res, p.isNeg)
 }
 
 func (*literalPattern) Err() error {
