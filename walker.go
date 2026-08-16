@@ -32,12 +32,17 @@ type RepoWalker interface {
 }
 
 // Function for constructing [RepoWalker] interfaces
-func NewRepoWalker(root string) RepoWalker {
-	return &treeRepoWalker{root, nil, NewMatcher(root), ".gitignore"}
+func NewRepoWalker(root string, patterns ...string) RepoWalker {
+	return &treeRepoWalker{os.DirFS(root), nil, NewMatcher(root, patterns...), ".gitignore"}
+}
+
+// Function for constructing [RepoWalker] interfaces from an [fs.FS]
+func NewRepoWalkerFS(rootFS fs.FS, root string, patterns ...string) RepoWalker {
+	return &treeRepoWalker{rootFS, nil, NewMatcher(root, patterns...), ".gitignore"}
 }
 
 type treeRepoWalker struct {
-	root           string
+	root           fs.FS
 	currentNode    node
 	matcher        Matcher
 	ignoreFileName string
@@ -45,7 +50,7 @@ type treeRepoWalker struct {
 
 func (rw *treeRepoWalker) WalkRepo(f fs.WalkDirFunc) {
 	rw.matcher.wrapErr(fs.WalkDir(
-		os.DirFS(rw.root),
+		rw.root,
 		".",
 		func(path string, d fs.DirEntry, err error) error {
 			baseName := d.Name()
@@ -75,6 +80,8 @@ func (rw *treeRepoWalker) WalkRepo(f fs.WalkDirFunc) {
 			)
 			rw.matcher.removePatterns(rw.currentNode.getParent().rollback())
 
+			// Uses manual Matcher.ExtendFromReader instead of Matcher.ExtendFromFile so Err doesn't
+			// get cluttered by failed file open attempts
 			if isDir {
 				if file, err := os.OpenFile(
 					filepath.Join(path, rw.ignoreFileName),
