@@ -66,9 +66,9 @@ func (m *matcher) Match(path string, isDir bool) bool {
 }
 
 func (m *matcher) MatchNormalized(path string, isDir bool) bool {
-	for i := len(m.patterns) - 1; i >= 0; i++ {
-		if m.patterns[i].MatchNormalized(path, isDir) {
-			return true
+	for i := len(m.patterns) - 1; i >= 0; i-- {
+		if isMatch, res := m.patterns[i].MatchNormalized(path, isDir); isMatch {
+			return res
 		}
 	}
 
@@ -83,10 +83,14 @@ func (m *matcher) SetRootDir(rootDir string) Matcher {
 func (m *matcher) Extend(patterns ...string) Matcher {
 	newPat := make([]Pattern, len(m.patterns), len(m.patterns)+len(patterns))
 	copy(newPat, m.patterns)
+	m.patterns = newPat
 
 	for _, pat := range patterns {
-		if p := ParsePattern(pat); p.Err() != nil {
-			m.wrapErr(p.Err())
+		p := ParsePattern(pat)
+		if err := p.Err(); err != nil {
+			if !errors.Is(err, &EmptyPatternErr{}) {
+				m.wrapErr(err)
+			}
 		} else {
 			m.patterns = append(m.patterns, p)
 		}
@@ -98,7 +102,7 @@ func (m *matcher) Extend(patterns ...string) Matcher {
 func (m *matcher) ExtendFromPatterns(patterns ...Pattern) Matcher {
 	newPat := make([]Pattern, len(m.patterns)+len(patterns))
 	copy(newPat, m.patterns)
-	copy(newPat, patterns)
+	copy(newPat[len(m.patterns):], patterns)
 	m.patterns = newPat
 
 	return m
@@ -109,7 +113,9 @@ func (m *matcher) ExtendFromFile(path string) Matcher {
 	if err != nil {
 		m.wrapErr(err)
 	} else {
-		defer m.wrapErr(file.Close())
+		defer func() {
+			m.wrapErr(file.Close())
+		}()
 		m.ExtendFromReader(file)
 	}
 
@@ -120,8 +126,11 @@ func (m *matcher) ExtendFromReader(reader io.Reader) Matcher {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if pat := ParsePattern(line); pat.Err() != nil {
-			m.err = errors.Join(m.err, pat.Err())
+		pat := ParsePattern(line)
+		if err := pat.Err(); err != nil {
+			if !errors.Is(err, &EmptyPatternErr{}) {
+				m.wrapErr(err)
+			}
 		} else {
 			m.patterns = append(m.patterns, pat)
 		}

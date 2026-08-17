@@ -1,3 +1,4 @@
+//revive:disable:confusing-results
 package ignored
 
 import (
@@ -24,9 +25,13 @@ import (
 type Pattern interface {
 	// Match determines if the given path matches the pattern, relative to the rootDir.
 	// It returns true if the path is matched, and an error if normalization fails.
-	Match(path string, isDir bool, rootDir string) (bool, error)
+	// The first bool is whether the raw pattern is a match or not.
+	// The second one is whether if it's ignored or not considering negation (leading !).
+	Match(path string, isDir bool, rootDir string) (isMatch bool, result bool, err error)
 	// MatchNormalized checks if the already-normalized path matches the pattern.
-	MatchNormalized(path string, isDir bool) bool
+	// The first bool is whether the raw pattern is a match or not.
+	// The second one is whether if it's ignored or not considering negation (leading !).
+	MatchNormalized(path string, isDir bool) (isMatch bool, result bool)
 	// Err returns any error encountered during pattern parsing or matching.
 	Err() error
 }
@@ -51,7 +56,7 @@ func ParsePattern(pat string) Pattern {
 	}
 
 	if len(pat) == 0 {
-		return &errPattern{errors.New("unexpected EOF: pattern is empty")}
+		return &emptyPattern{}
 	}
 
 	if !strings.ContainsRune(pat, '/') {
@@ -88,16 +93,18 @@ type globPattern struct {
 	isNeg bool
 }
 
-func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, bool, error) {
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		return getRes(false, p.isNeg), err
+		isMatch, res := getRes(false, p.isNeg)
+		return isMatch, res, err
 	}
 
-	return p.MatchNormalized(path, isDir), nil
+	isMatch, res := p.MatchNormalized(path, isDir)
+	return isMatch, res, nil
 }
 
-func (p *globPattern) MatchNormalized(path string, isDir bool) bool {
+func (p *globPattern) MatchNormalized(path string, isDir bool) (bool, bool) {
 	if p.isDir && !isDir {
 		path = filepath.Dir(path)
 	}
@@ -109,19 +116,28 @@ func (*globPattern) Err() error {
 	return nil
 }
 
-type errPattern struct {
-	err error
+type errPattern struct{ err error }
+
+func (*errPattern) Match(_ string, _ bool, _ string) (bool, bool, error) {
+	return false, false, nil
 }
 
-func (*errPattern) Match(_ string, _ bool, _ string) (bool, error) {
-	return false, nil
+func (*errPattern) MatchNormalized(_ string, _ bool) (bool, bool) { return false, false }
+func (p *errPattern) Err() error                                  { return p.err }
+
+type EmptyPatternErr struct{}
+
+func (*EmptyPatternErr) Error() string { return "pattern is empty" }
+
+type emptyPattern struct{}
+
+func (*emptyPattern) Match(_ string, _ bool, _ string) (bool, bool, error) {
+	return false, false, nil
 }
-func (*errPattern) MatchNormalized(_ string, _ bool) bool {
-	return false
-}
-func (p *errPattern) Err() error {
-	return p.err
-}
+
+func (*emptyPattern) MatchNormalized(_ string, _ bool) (bool, bool) { return false, false }
+
+func (*emptyPattern) Err() error { return &EmptyPatternErr{} }
 
 type literalPattern struct {
 	literal string
@@ -129,16 +145,18 @@ type literalPattern struct {
 	isNeg   bool
 }
 
-func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, error) {
+func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, bool, error) {
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		return getRes(false, p.isNeg), err
+		isMatch, res := getRes(false, p.isNeg)
+		return isMatch, res, err
 	}
 
-	return p.MatchNormalized(path, isDir), nil
+	isMatch, res := p.MatchNormalized(path, isDir)
+	return isMatch, res, nil
 }
 
-func (p *literalPattern) MatchNormalized(path string, isDir bool) bool {
+func (p *literalPattern) MatchNormalized(path string, isDir bool) (bool, bool) {
 	if !strings.HasPrefix(path, p.literal) {
 		return getRes(false, p.isNeg)
 	}
@@ -171,9 +189,9 @@ func NormalizePath(path string, rootDir string) (string, error) {
 	return "/" + relPath + "/", nil
 }
 
-func getRes(res bool, isNeg bool) bool {
+func getRes(res bool, isNeg bool) (bool, bool) {
 	if isNeg {
-		return !res
+		return res, !res
 	}
-	return res
+	return res, res
 }
