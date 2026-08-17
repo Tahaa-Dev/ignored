@@ -35,10 +35,14 @@ func (n *dirNode) addChild(newChild node) node { n.child = newChild; return n }
 func (n *dirNode) getParent() node             { return n.parent }
 
 func (n *dirNode) getAncestor(ancestor string) node {
-	if n.path == ancestor {
-		return n
+	curr := node(n)
+	for curr != nil {
+		if curr.getPath() == ancestor {
+			return curr
+		}
+		curr = curr.getParent()
 	}
-	return n.parent.getAncestor(ancestor)
+	return nil
 }
 
 type fileNode struct {
@@ -46,9 +50,24 @@ type fileNode struct {
 	parent node
 }
 
-func (n *fileNode) getPath() string                  { return n.path }
-func (n *fileNode) getParent() node                  { return n.parent }
-func (n *fileNode) rollback() int                    { return n.parent.rollback() }
-func (*fileNode) setRollback(_ int)                  {}
-func (n *fileNode) addChild(_ node) node             { return n }
-func (n *fileNode) getAncestor(ancestor string) node { return n.parent.getAncestor(ancestor) }
+func (n *fileNode) getPath() string { return n.path }
+func (n *fileNode) getParent() node { return n.parent }
+
+func (n *fileNode) rollback() int {
+	curr := n.parent
+	return curr.rollback()
+}
+
+func (*fileNode) setRollback(_ int)      {}
+func (n *fileNode) addChild(_ node) node { return n }
+
+func (n *fileNode) getAncestor(ancestor string) node {
+	curr := n.parent
+	for curr != nil {
+		if curr.getPath() == ancestor {
+			return curr
+		}
+		curr = curr.getParent()
+	}
+	return nil
+}
