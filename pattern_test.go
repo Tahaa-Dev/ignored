@@ -87,11 +87,7 @@ func TestPattern_Match(t *testing.T) {
 			if p.Err() != nil {
 				t.Fatalf("Failed to parse pattern %s: %v", tt.pattern, p.Err())
 			}
-			_, got, err := p.Match(tt.path, tt.isDir, tt.rootDir)
-			if err != nil {
-				t.Errorf("Match() error = %v", err)
-				return
-			}
+			_, got := p.Match(tt.path, tt.isDir, tt.rootDir)
 			if got != tt.want {
 				t.Errorf("Match() = %v, want %v", got, tt.want)
 			}

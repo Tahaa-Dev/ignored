@@ -23,20 +23,21 @@ import (
 //		// handle error
 //	}
 type RepoWalker interface {
-	// WalkRepo traverses the repository starting at the root, applying the [Matcher] to skip ignored files and directories. It uses the provided [fs.WalkDirFunc].
+	// Traverses the repository starting at the root, applying the [Matcher] to skip ignored files and directories.
+	// Uses the provided [fs.WalkDirFunc].
 	WalkRepo(fs.WalkDirFunc)
-	// SetIgnoreFileName changes the name of the file used to detect ignore patterns (default is ".gitignore").
+	// Changes the name of the file used to detect ignore patterns (default is ".gitignore").
 	SetIgnoreFileName(fileName string) RepoWalker
-	// Err returns any error that occurred during the repository traversal.
+	// Returns any error that occurred during the repository traversal.
 	Err() error
 }
 
-// Function for constructing [RepoWalker] interfaces
+// Function for constructing [RepoWalker] interfaces.
 func NewRepoWalker(root string, patterns ...string) RepoWalker {
 	return &treeRepoWalker{os.DirFS(root), nil, NewMatcher(root, patterns...), ".gitignore"}
 }
 
-// Function for constructing [RepoWalker] interfaces from an [fs.FS]
+// Function for constructing [RepoWalker] interfaces from an [fs.FS].
 func NewRepoWalkerFS(rootFS fs.FS, root string, patterns ...string) RepoWalker {
 	return &treeRepoWalker{rootFS, nil, NewMatcher(root, patterns...), ".gitignore"}
 }

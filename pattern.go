@@ -23,20 +23,19 @@ import (
 //		fmt.Println("File is ignored")
 //	}
 type Pattern interface {
-	// Match determines if the given path matches the pattern, relative to the rootDir.
-	// It returns true if the path is matched, and an error if normalization fails.
+	// Determines if the given path matches the pattern, relative to the rootDir.
 	// The first bool is whether the raw pattern is a match or not.
 	// The second one is whether if it's ignored or not considering negation (leading !).
-	Match(path string, isDir bool, rootDir string) (isMatch bool, result bool, err error)
-	// MatchNormalized checks if the already-normalized path matches the pattern.
+	Match(path string, isDir bool, rootDir string) (isMatch bool, result bool)
+	// Checks if the already-normalized path matches the pattern.
 	// The first bool is whether the raw pattern is a match or not.
 	// The second one is whether if it's ignored or not considering negation (leading !).
 	MatchNormalized(path string, isDir bool) (isMatch bool, result bool)
-	// Err returns any error encountered during pattern parsing or matching.
+	// Returns any error encountered during pattern parsing.
 	Err() error
 }
 
-// Function for constructing [Pattern] interfaces
+// Function for constructing [Pattern] interfaces.
 func ParsePattern(pat string) Pattern {
 	isNeg := false
 	isDir := false
@@ -93,15 +92,13 @@ type globPattern struct {
 	isNeg bool
 }
 
-func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, bool, error) {
+func (p *globPattern) Match(path string, isDir bool, rootDir string) (bool, bool) {
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		isMatch, res := getRes(false, p.isNeg)
-		return isMatch, res, err
+		return getRes(false, p.isNeg)
 	}
 
-	isMatch, res := p.MatchNormalized(path, isDir)
-	return isMatch, res, nil
+	return p.MatchNormalized(path, isDir)
 }
 
 func (p *globPattern) MatchNormalized(path string, isDir bool) (bool, bool) {
@@ -116,28 +113,21 @@ func (*globPattern) Err() error {
 	return nil
 }
 
-type errPattern struct{ err error }
-
-func (*errPattern) Match(_ string, _ bool, _ string) (bool, bool, error) {
-	return false, false, nil
-}
-
-func (*errPattern) MatchNormalized(_ string, _ bool) (bool, bool) { return false, false }
-func (p *errPattern) Err() error                                  { return p.err }
-
 type EmptyPatternErr struct{}
 
 func (*EmptyPatternErr) Error() string { return "pattern is empty" }
 
+type errPattern struct{ err error }
+
+func (*errPattern) Match(_ string, _ bool, _ string) (bool, bool) { return false, false }
+func (*errPattern) MatchNormalized(_ string, _ bool) (bool, bool) { return false, false }
+func (p *errPattern) Err() error                                  { return p.err }
+
 type emptyPattern struct{}
 
-func (*emptyPattern) Match(_ string, _ bool, _ string) (bool, bool, error) {
-	return false, false, nil
-}
-
+func (*emptyPattern) Match(_ string, _ bool, _ string) (bool, bool) { return false, false }
 func (*emptyPattern) MatchNormalized(_ string, _ bool) (bool, bool) { return false, false }
-
-func (*emptyPattern) Err() error { return &EmptyPatternErr{} }
+func (*emptyPattern) Err() error                                    { return &EmptyPatternErr{} }
 
 type literalPattern struct {
 	literal string
@@ -145,15 +135,13 @@ type literalPattern struct {
 	isNeg   bool
 }
 
-func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, bool, error) {
+func (p *literalPattern) Match(path string, isDir bool, rootDir string) (bool, bool) {
 	path, err := NormalizePath(path, rootDir)
 	if err != nil {
-		isMatch, res := getRes(false, p.isNeg)
-		return isMatch, res, err
+		return getRes(false, p.isNeg)
 	}
 
-	isMatch, res := p.MatchNormalized(path, isDir)
-	return isMatch, res, nil
+	return p.MatchNormalized(path, isDir)
 }
 
 func (p *literalPattern) MatchNormalized(path string, isDir bool) (bool, bool) {
@@ -175,7 +163,7 @@ func (*literalPattern) Err() error {
 	return nil
 }
 
-// Helper function for normalizing paths used by [Pattern].Match() and [Matcher].Match()
+// Helper function for normalizing paths used by [Pattern].Match() and [Matcher].Match().
 func NormalizePath(path string, rootDir string) (string, error) {
 	relPath, err := filepath.Rel(filepath.ToSlash(rootDir), filepath.ToSlash(path))
 	if err != nil {
