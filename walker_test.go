@@ -88,7 +88,10 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 
 		walker := NewRepoWalkerFS(fsys)
 		visitedCount := 0
-		err := walker.WalkRepo(func(path string, d fs.DirEntry, err error) error {
+		err := walker.WalkRepo(func(_ string, _ fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
 			visitedCount++
 			return nil
 		})
@@ -109,6 +112,9 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 		walker := NewRepoWalkerFS(fsys)
 		visited := make(map[string]bool)
 		_ = walker.WalkRepo(func(path string, _ fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
 			visited[path] = true
 			return nil
 		})
@@ -133,6 +139,9 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 		walker := NewRepoWalkerFS(fsys)
 		visited := make(map[string]bool)
 		_ = walker.WalkRepo(func(path string, _ fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
 			visited[path] = true
 			return nil
 		})
@@ -148,4 +157,3 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 		}
 	})
 }
-
