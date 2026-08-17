@@ -80,9 +80,9 @@ import (
 )
 
 func main() {
-    matcher := ignored.NewMatcher("/path/to/project/root", "*.log", "node_modules/")
+    matcher := ignored.NewMatcher("/root/project", "*.log", "node_modules/")
     
-    if matcher.Match("node_modules/pkg/main.js", false) {
+    if matcher.Match("/root/project/node_modules/pkg/main.js", false) {
         fmt.Println("Path is ignored")
     }
 }
