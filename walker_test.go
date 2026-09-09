@@ -81,7 +81,7 @@ func TestRepoWalker_SetIgnoreFileName(t *testing.T) {
 }
 
 func TestRepoWalker_EdgeCases(t *testing.T) {
-	t.Run("EmptyFS", func(t *testing.T) {
+	t.Run("Empty FS", func(t *testing.T) {
 		fsys := fstest.MapFS{
 			".": {Mode: fs.ModeDir},
 		}
@@ -103,7 +103,7 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("NoIgnoreFile", func(t *testing.T) {
+	t.Run("No Ignore File", func(t *testing.T) {
 		fsys := fstest.MapFS{
 			".":     {Mode: fs.ModeDir},
 			"a.txt": {Data: []byte("content")},
@@ -127,14 +127,17 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("IgnoreNestedDir", func(t *testing.T) {
+	t.Run("Ignore Scope Nested Dir", func(t *testing.T) {
 		fsys := fstest.MapFS{
-			".":                 {Mode: fs.ModeDir},
-			".gitignore":        {Data: []byte("ignored_dir")},
-			"ignored_dir":       {Mode: fs.ModeDir},
-			"ignored_dir/a.txt": {Data: []byte("content")},
-			"kept_dir":          {Mode: fs.ModeDir},
-			"kept_dir/b.txt":    {Data: []byte("content")},
+			".":                     {Mode: fs.ModeDir},
+			".gitignore":            {Data: []byte("ignored_dir")},
+			"ignored_dir":           {Mode: fs.ModeDir},
+			"ignored_dir/a.txt":     {Data: []byte("content")},
+			"nested_dir":            {Mode: fs.ModeDir},
+			"nested_dir/.gitignore": {Data: []byte("kept_dir\na.txt")},
+			"nested_dir/a.txt":      {Data: []byte("content")},
+			"kept_dir":              {Mode: fs.ModeDir},
+			"kept_dir/a.txt":        {Data: []byte("content")},
 		}
 		walker := NewRepoWalkerFS(fsys)
 		visited := make(map[string]bool)
@@ -146,14 +149,16 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 			return nil
 		})
 
-		if visited["ignored_dir"] {
-			t.Error("ignored_dir should have been skipped")
+		for _, v := range [3]string{"ignored_dir", "ignored_dir/a.txt", "nested_dir/a.txt"} {
+			if visited[v] {
+				t.Errorf("%s should have been skipped", v)
+			}
 		}
-		if visited["ignored_dir/a.txt"] {
-			t.Error("ignored_dir/a.txt should have been skipped")
-		}
-		if !visited["kept_dir"] {
-			t.Error("kept_dir should have been visited")
+
+		for _, v := range [3]string{"nested_dir", "kept_dir", "kept_dir/a.txt"} {
+			if !visited[v] {
+				t.Errorf("%s should have been visited", v)
+			}
 		}
 	})
 }
