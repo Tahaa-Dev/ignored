@@ -129,15 +129,16 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 
 	t.Run("Ignore Scope Nested Dir", func(t *testing.T) {
 		fsys := fstest.MapFS{
-			".":                     {Mode: fs.ModeDir},
-			".gitignore":            {Data: []byte("ignored_dir")},
-			"ignored_dir":           {Mode: fs.ModeDir},
-			"ignored_dir/a.txt":     {Data: []byte("content")},
-			"nested_dir":            {Mode: fs.ModeDir},
-			"nested_dir/.gitignore": {Data: []byte("kept_dir\na.txt")},
-			"nested_dir/a.txt":      {Data: []byte("content")},
-			"kept_dir":              {Mode: fs.ModeDir},
-			"kept_dir/a.txt":        {Data: []byte("content")},
+			".":                                   {Mode: fs.ModeDir},
+			".gitignore":                          {Data: []byte("ignored_dir")},
+			"ignored_dir":                         {Mode: fs.ModeDir},
+			"ignored_dir/a.txt":                   {Data: []byte("content")},
+			"nested_dir":                          {Mode: fs.ModeDir},
+			"nested_dir/nested_subdir":            {Mode: fs.ModeDir},
+			"nested_dir/nested_subdir/.gitignore": {Data: []byte("kept_dir\na.txt")},
+			"nested_dir/nested_subdir/a.txt":      {Data: []byte("content")},
+			"kept_dir":                            {Mode: fs.ModeDir},
+			"kept_dir/a.txt":                      {Data: []byte("content")},
 		}
 		walker := NewRepoWalkerFS(fsys)
 		visited := make(map[string]bool)
@@ -149,13 +150,13 @@ func TestRepoWalker_EdgeCases(t *testing.T) {
 			return nil
 		})
 
-		for _, v := range [3]string{"ignored_dir", "ignored_dir/a.txt", "nested_dir/a.txt"} {
+		for _, v := range [3]string{"ignored_dir", "ignored_dir/a.txt", "nested_dir/nested_subdir/a.txt"} {
 			if visited[v] {
 				t.Errorf("%s should have been skipped", v)
 			}
 		}
 
-		for _, v := range [3]string{"nested_dir", "kept_dir", "kept_dir/a.txt"} {
+		for _, v := range [4]string{"nested_dir", "nested_dir/nested_subdir", "kept_dir", "kept_dir/a.txt"} {
 			if !visited[v] {
 				t.Errorf("%s should have been visited", v)
 			}
